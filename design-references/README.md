@@ -1,0 +1,1 @@
+These are static client-approved DESIGN REFERENCES. They are NOT site backgrounds or live HTML. They contain illustrations or figures requiring verification. The actual site is coded in src/ and its images are in public/assets/.

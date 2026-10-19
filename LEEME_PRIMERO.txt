@@ -1,0 +1,15 @@
+EL PORVENIR — SITIO WEB PREMIUM v1.0
+
+PARA VER EL DISEÑO AHORA MISMO:
+1. Descomprime el ZIP completo.
+2. Abre el archivo preview.html con Chrome o Edge.
+   Esta es una vista previa independiente, sin backend ni animaciones GSAP.
+
+PARA EJECUTAR EL PROYECTO NEXT.JS REAL EN WINDOWS:
+1. Instala Node.js 22 LTS.
+2. Doble clic en INICIAR_WINDOWS.bat (requiere internet la primera vez).
+3. Visita http://localhost:3000
+
+IMPORTANTE: el proyecto contiene contenido de inversión y recursos visuales conceptuales.
+Verifica topografía y documentos antes de publicarlo o enviarlo a inversionistas.
+README.md y CHECKLIST.md incluyen instrucciones profesionales de despliegue.
