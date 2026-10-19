@@ -1,72 +1,798 @@
 'use client';
-import {useEffect,useState} from 'react';
-import {useCinematicScroll} from '@/lib/useCinematicScroll';
-import {ArrowDown,ArrowRight,ArrowUpRight,ChevronLeft,ChevronRight,MapPin,Menu,Phone,ShieldCheck,Sun,Waves,X,Landmark,FileText,Compass,ExternalLink} from 'lucide-react';
-import TerritoryMap from '@/components/TerritoryMap';
-import InvestorForm from '@/components/InvestorForm';
-import ValueComparison from '@/components/ValueComparison';
-import {copy,type Lang} from '@/lib/content';
-const phone=process.env.NEXT_PUBLIC_CONTACT_WHATSAPP||'526867013628';
-const whatsapp=`https://wa.me/${phone}`;
-const galleryAssets=[
-  {src:'/assets/original-seaview.webp',concept:false},
-  {src:'/assets/original-palapa.webp',concept:false},
-  {src:'/assets/original-architecture.webp',concept:false},
-  {src:'/assets/original-arch.webp',concept:false},
-  {src:'/assets/historical-concrete.webp',concept:false},
-  {src:'/assets/real-retouched-cactus-dunes.webp',concept:false,retouched:true},
-  {src:'/assets/architecture-concept.webp',concept:true},
+import { useEffect, useState, useRef } from 'react';
+
+type Lang = 'en' | 'es';
+type ParcelId = 'all' | 'baja' | 'california';
+
+const previewI18n = {
+  en: {
+    nav: ['Opportunity', 'Territory', 'Vision', 'Gallery', 'Investment', 'Contact'],
+    heroEyebrow: 'EL PORVENIR · SAN FELIPE · BAJA CALIFORNIA',
+    heroTitle: 'Where the desert',
+    heroAccent: 'meets the sea.',
+    heroDesc: 'A large-scale coastal land investment opportunity on the Gulf of California.',
+    heroBtn: 'Explore the opportunity →',
+    opportunityEyebrow: '02 — THE OPPORTUNITY',
+    opportunityTitle: 'An extraordinary',
+    opportunityAccent: 'land opportunity.',
+    opportunityDesc: 'Two privately held land parcels offered together, in a setting where the desert meets the Gulf of California.',
+    territoryEyebrow: '03 — EXPLORE THE TERRITORY',
+    territoryTitle: 'Understand the',
+    territoryAccent: 'land configuration.',
+    territoryDesc: 'Select one of the two parcels in this combined offering to view the summary.',
+    visionEyebrow: '04 — DEVELOPMENT VISION',
+    visionTitle: 'One landscape.',
+    visionAccent: 'Many possibilities.',
+    visionDesc: 'Illustrative use cases only — planning, permits and independent feasibility review required.',
+    galleryEyebrow: '05 — GALLERY & EXPERIENCE',
+    galleryTitle: 'See the place.',
+    galleryAccent: 'Feel the setting.',
+    galleryDesc: 'Explore the coastline, desert landscapes and original structures through selected visual records. Historic photos, AI-retouched imagery and future concepts are identified separately.',
+    investmentEyebrow: '06 — INVESTMENT OVERVIEW',
+    investmentTitle: 'Investment information',
+    investmentAccent: 'for informed decisions.',
+    investmentDesc: 'An initial summary of the offer, not a financial performance guarantee.',
+    contactEyebrow: '07 — PRIVATE INVESTMENT INQUIRY',
+    contactTitle: 'Begin the',
+    contactAccent: 'conversation.',
+    contactDesc: 'Qualified investors are invited to request a private presentation and additional due diligence materials.',
+  },
+  es: {
+    nav: ['Oportunidad', 'Territorio', 'Visión', 'Galería', 'Inversión', 'Contacto'],
+    heroEyebrow: 'EL PORVENIR · SAN FELIPE · BAJA CALIFORNIA',
+    heroTitle: 'Donde el desierto',
+    heroAccent: 'encuentra al mar.',
+    heroDesc: 'Una oportunidad de inversión territorial en la costa del Golfo de California.',
+    heroBtn: 'Explorar oportunidad →',
+    opportunityEyebrow: '02 — LA OPORTUNIDAD',
+    opportunityTitle: 'Una oportunidad territorial',
+    opportunityAccent: 'extraordinaria.',
+    opportunityDesc: 'Dos predios privados ofrecidos en conjunto, en un entorno donde el desierto se encuentra con el Golfo de California.',
+    territoryEyebrow: '03 — EXPLORA EL TERRITORIO',
+    territoryTitle: 'Comprende la',
+    territoryAccent: 'configuración territorial.',
+    territoryDesc: 'Selecciona uno de los dos predios de esta oferta conjunta para ver su resumen.',
+    visionEyebrow: '04 — VISIÓN DE DESARROLLO',
+    visionTitle: 'Un territorio.',
+    visionAccent: 'Muchas posibilidades.',
+    visionDesc: 'Usos ilustrativos únicamente; todo proyecto requiere planeación, permisos y revisión de factibilidad independiente.',
+    galleryEyebrow: '05 — GALERÍA Y EXPERIENCIA',
+    galleryTitle: 'Conoce el lugar.',
+    galleryAccent: 'Siente el entorno.',
+    galleryDesc: 'Explora la costa, el paisaje desértico y las estructuras existentes mediante registros visuales seleccionados. Las fotos históricas, las imágenes retocadas con IA y los conceptos futuros están identificados por separado.',
+    investmentEyebrow: '06 — RESUMEN DE INVERSIÓN',
+    investmentTitle: 'Información de inversión',
+    investmentAccent: 'para decidir mejor.',
+    investmentDesc: 'Una síntesis inicial de la oferta; no constituye garantía de desempeño financiero.',
+    contactEyebrow: '07 — CONTACTO PRIVADO',
+    contactTitle: 'Comencemos la',
+    contactAccent: 'conversación.',
+    contactDesc: 'Los inversionistas calificados pueden solicitar una presentación privada y materiales adicionales de due diligence.',
+  },
+};
+
+const parcelData = {
+  baja: {
+    title: 'Baja Land',
+    surface: '646.21 ha',
+    summary: {
+      en: 'Inland parcel; approximate size per supplied documents.',
+      es: 'Predio interior con vocación hotelera y residencial; superficie sujeta a verificación.',
+    },
+  },
+  california: {
+    title: 'California Rancho',
+    surface: '47.61 ha',
+    summary: {
+      en: 'Coastal parcel with existing structures; features subject to verification.',
+      es: 'Predio costero con 1.4 km de playa y construcciones existentes; características por confirmar.',
+    },
+  },
+  all: {
+    title: 'Combined Offering',
+    surface: '693.83 ha',
+    summary: {
+      en: 'Joint offering of the two parcels, boundaries subject to cadastral verification.',
+      es: 'Oferta conjunta de los dos predios privados; linderos sujetos a verificación catastral.',
+    },
+  },
+};
+
+const galleryImages = [
+  '/assets/original-seaview.webp',
+  '/assets/original-palapa.webp',
+  '/assets/original-architecture.webp',
+  '/assets/original-arch.webp',
+  '/assets/historical-concrete.webp',
+  '/assets/real-retouched-cactus-dunes.webp',
+  '/assets/architecture-concept.webp',
 ];
-function Brand({light=false}:{light?:boolean}){return <a className={'brand '+(light?'brand-light':'')} href="#home" aria-label="El Porvenir, inicio"><img src="/assets/emblem.png" alt=""/><span className="brand-words"><strong>EL PORVENIR</strong><small>COASTAL LAND INVESTMENT</small></span></a>}
-function SectionHeader({k,title,accent,description}: {k:string;title:string;accent:string;description?:string}){return <div className="section-header reveal"><div className="eyebrow with-line">{k}</div><h2 className="display-title"><span className="title-first">{title}</span> <em>{accent}</em></h2>{description&&<p className="section-intro">{description}</p>}</div>}
-function InfoIcon({type}:{type:'sea'|'sun'|'shield'}){return type==='sea'?<Waves/>:type==='sun'?<Sun/>:<ShieldCheck/>}
-export default function Home(){
- const [lang,setLang]=useState<Lang>('en');const t=copy[lang];
- const [menuOpen,setMenuOpen]=useState(false);
- const [lightbox,setLightbox]=useState<number|null>(null);
- useCinematicScroll(lang);
- useEffect(()=>{document.documentElement.lang=lang;},[lang]);
- useEffect(()=>{
-  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){setLightbox(null);setMenuOpen(false)}if(lightbox!==null&&e.key==='ArrowRight')setLightbox((lightbox+1)%galleryAssets.length);if(lightbox!==null&&e.key==='ArrowLeft')setLightbox((lightbox+galleryAssets.length-1)%galleryAssets.length)};
-  window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
- },[lightbox]);
- const moveLightbox=(delta:number)=>setLightbox(v=>v===null?null:(v+galleryAssets.length+delta)%galleryAssets.length);
- return <>
- <div className="scroll-progress" aria-hidden="true"/><header className="site-nav"><div className="nav-inner shell"><Brand light/><nav id="site-main-menu" className={'main-menu '+(menuOpen?'open':'')} aria-label="Site navigation">{t.nav.map((n,i)=><a key={i} href={'#'+['opportunity','territory','vision','gallery','investment','contact'][i]} onClick={()=>setMenuOpen(false)}>{n}</a>)}</nav><div className="nav-end"><button className="language-switch" aria-label={lang==='en'?'Switch to Spanish':'Cambiar a inglés'} onClick={()=>setLang(v=>v==='en'?'es':'en')}><span className={"language-option "+(lang==='en'?'active':'')}>EN</span><span className="language-divider">/</span><span className={"language-option "+(lang==='es'?'active':'')}>ES</span></button><a href="#contact" className="nav-action"><ArrowUpRight size={17}/></a><button className="menu-button" aria-label={menuOpen?'Close navigation':'Open navigation'} onClick={()=>setMenuOpen(v=>!v)} aria-expanded={menuOpen} aria-controls="site-main-menu">{menuOpen?<X/>:<Menu/>}</button></div></div></header>
- <main>
-  <section id="home" className="hero-section">
-   <div className="hero-parallax" style={{backgroundImage:'url(/assets/hero-concept.webp)'}}/>
-   <div className="hero-shade"/>
-   <div className="hero-grain"/>
-   <div className="hero-content shell">
-    <div className="hero-copy"><div className="eyebrow hero-eyebrow reveal"><span className="line"/>{t.heroEyebrow}</div>
-     <h1 className="hero-title reveal"><span className="hero-line">{t.heroTitle}</span><span className="hero-line"><em>{t.heroAccent}</em></span></h1>
-     <p className="hero-desc reveal">{t.heroDesc}</p>
-     <div className="hero-actions reveal"><a href="#opportunity" className="button-gold">{t.heroButton}<ArrowUpRight size={19}/></a><a href="#territory" className="button-ghost">{lang==='es'?'Ver territorio':'View territory'}<ArrowRight size={17}/></a></div>
-    </div>
-    <div className="hero-bottom"><div className="hero-stat"><b><span data-count="693.83" data-decimals="2">693.83</span> <small>ha</small></b><span>{lang==='es'?'SUPERFICIE APROXIMADA':'APPROXIMATE LAND AREA'}</span></div><div className="hero-stat"><b>US$7.5M</b><span>{lang==='es'?'PRECIO DE OFERTA':'OFFERING PRICE'}</span></div><a className="scroll-cue" href="#opportunity">{t.heroScroll}<ArrowDown size={17}/></a></div>
-   </div>
-   <div className="concept-pill">{lang==='es'?'Paisaje conceptual · no fotografía catastral':'Concept landscape · not cadastral photography'}</div>
-  </section>
-  <section id="opportunity" className="section opportunity-section ivory-section"><div className="shell opportunity-grid">
-    <div className="opportunity-copy"><SectionHeader k={t.opportunityEyebrow} title={t.opportunityTitle} accent={t.opportunityAccent} description={t.opportunityDesc}/>
-      <div className="opportunity-metrics reveal"><div><b><span data-count="693.83" data-decimals="2">693.83</span></b><span>{lang==='es'?'HECTÁREAS APROX.':'APPROX. HECTARES'}</span></div><div><b>US$7.5M</b><span>{lang==='es'?'PRECIO DE OFERTA':'OFFERING PRICE'}</span></div><div><b><span data-count="2" data-decimals="0" data-pad="2">02</span></b><span>{lang==='es'?'PREDIOS PRIVADOS':'PRIVATE PARCELS'}</span></div></div>
-      <p className="support-line reveal"><Compass size={18}/>{lang==='es'?'San Felipe, Baja California · Golfo de California':'San Felipe, Baja California · Gulf of California'}</p>
-      <a className="inline-link reveal" href="#investment">{lang==='es'?'Conocer la oferta':'Explore investment terms'}<ArrowUpRight size={18}/></a>
-    </div>
-    <div className="photo-frame reveal"><div className="photo-viewport"><img src="/assets/architecture-concept.webp" className="rise-photo" alt="Conceptual visualization of a finished coastal residence" loading="lazy"/></div><div className="photo-caption"><span>{t.opportunityNote}</span><span className="decorative-line"/></div></div>
-  </div></section>
-  <section id="territory" className="section territory-section ivory-section"><div className="shell territory-shell"><SectionHeader k={t.territoryEyebrow} title={t.territoryTitle} accent={t.territoryAccent} description={t.territoryDesc}/><TerritoryMap lang={lang}/></div></section>
-  <section id="vision" className="section vision-section"><div className="shell"><div className="vision-intro"><SectionHeader k={t.visionEyebrow} title={t.visionTitle} accent={t.visionAccent} description={t.visionDesc}/><div className="vision-signet" aria-hidden="true"><img src="/assets/emblem.png" alt=""/></div></div>
-    <div className="vision-stage"><div className="vision-grid">{(['vision-resort.webp','vision-residential.webp','vision-eco.webp'] as const).map((asset,i)=><article className="vision-card reveal" key={asset}><div className="vision-image"><img src={'/assets/'+asset} alt={t.visionCards[i].title} loading="lazy"/></div><div className="vision-body"><span className="vision-index">0{i+1} / {lang==='es'?'ESCENARIO CONCEPTUAL':'CONCEPT SCENARIO'}</span><h3>{t.visionCards[i].title}</h3><p>{t.visionCards[i].sub}</p><small>{t.labelConcept}</small></div></article>)}</div><div className="vision-progress-track" aria-hidden="true"><div className="vision-progress-fill"/></div></div>
-    <p className="disclaimer light-disclaimer">{lang==='es'?'Todos los usos de suelo, obras y desarrollos propuestos requieren estudios y autorizaciones aplicables. No son proyectos existentes.':'All proposed uses, structures, and developments require applicable feasibility studies and approvals. These are not existing projects.'}</p>
-  </div></section>
-  <section id="gallery" className="section gallery-section ivory-section"><div className="shell gallery-grid"><div className="gallery-mosaic reveal">{galleryAssets.map((it,i)=><button className={'gallery-tile gallery-tile-'+i} key={it.src} onClick={()=>setLightbox(i)} aria-label={`${t.galleryLabels[i]} - ${lang==='es'?'Ampliar':'Enlarge'}`}><img src={it.src} alt={t.galleryLabels[i]} loading="lazy"/><span className="tile-caption">{t.galleryLabels[i]} <ArrowUpRight size={16}/></span>{it.concept&&<span className="tile-concept">{t.labelConcept}</span>}{it.retouched&&<span className="tile-concept tile-retouched">{t.labelRetouched}</span>}</button>)}</div>
-    <div className="gallery-copy"><SectionHeader k={t.galleryEyebrow} title={t.galleryTitle} accent={t.galleryAccent} description={t.galleryDesc}/><div className="gallery-feature reveal"><Waves/><div><h3>{lang==='es'?'Ambiente costero':'Coastal setting'}</h3><p>{lang==='es'?'Vistas abiertas al Golfo de California.':'Open views toward the Gulf of California.'}</p></div></div><div className="gallery-feature reveal"><Sun/><div><h3>{lang==='es'?'Paisaje desértico':'Desert landscape'}</h3><p>{lang==='es'?'El carácter del desierto es parte esencial de la experiencia.':'The desert environment is a defining part of the setting.'}</p></div></div><div className="gallery-feature reveal"><Landmark/><div><h3>{lang==='es'?'Construcciones existentes':'Existing structures'}</h3><p>{lang==='es'?'Fotografías históricas, sujetas a actualización en sitio.':'Historical photographs, pending current on-site updates.'}</p></div></div></div></div></section>
-  <section id="investment" className="section investment-section ivory-section"><div className="shell"><div className="investment-top"><SectionHeader k={t.financeEyebrow} title={t.financeTitle} accent={t.financeAccent} description={t.financeDesc}/></div><div className="investment-grid"><article className="valuation-panel reveal"><ValueComparison lang={lang}/><div className="value-panel-footer"><span>{t.financeHectares}<b>693.83 ha</b></span><span>{t.financePlots}<b>02</b></span></div></article>
-      <article className="terms-panel reveal"><div className="eyebrow">DIRECT OWNER FINANCING · SUBJECT TO AGREEMENT</div><h3>{t.financeTerms}</h3><p>{t.financeTermsDesc}</p><div className="installment-list">{[1,2,3].map(n=><div className="installment" key={n}><span className="installment-number">0{n}</span><div><b>{lang==='es'?['Apertura y contrato','Pago intermedio','Cierre y escrituración'][n-1]:['Agreement stage','Intermediate installment','Closing and title transfer'][n-1]}</b><small>{lang==='es'?'Monto y calendario por acordar':'Amount and schedule to be agreed'}</small></div><FileText size={19}/></div>)}</div><a href="#contact" className="button-gold terms-cta">{t.financeTermsBtn}<ArrowUpRight size={19}/></a></article></div><p className="disclaimer dark-disclaimer">{t.financeNote}</p></div></section>
-  <section id="contact" className="contact-section"><div className="contact-backdrop"/><div className="contact-overlay"/><div className="shell contact-inner"><div className="contact-main"><div className="contact-left"><span className="eyebrow with-line">{t.contactEyebrow}</span><div className="contact-brand"><Brand light/></div><h2 className="contact-heading">{t.contactTitle}<br/><em>{t.contactAccent}</em></h2><p>{t.contactDesc}</p><div className="direct-contacts"><span className="eyebrow">{t.contactDirect}</span><a href={whatsapp} target="_blank" rel="noopener noreferrer"><Phone size={19}/>+52 686 701 3628<ExternalLink size={14}/></a><div><MapPin size={19}/>{t.contactLocation}</div><span>Francisco Reynoso · Reynoso & Asociados</span></div></div><div className="contact-right"><div className="contact-panel"><span className="eyebrow">PRIVATE INVESTMENT INQUIRY</span><h3>{lang==='es'?'Solicita una presentación privada':'Request a private presentation'}</h3><InvestorForm lang={lang}/></div></div></div><footer className="footer"><span>© {new Date().getFullYear()} EL PORVENIR</span><span>{t.rights}</span><span>{t.footerNote}</span></footer></div></section>
- </main>
- {lightbox!==null&&<div className="lightbox" role="dialog" aria-modal="true" aria-label={t.galleryLabels[lightbox]} onClick={()=>setLightbox(null)}><button className="lightbox-close" aria-label="Close gallery" onClick={()=>setLightbox(null)}><X/></button><button className="lightbox-arrow prev" aria-label="Previous photo" onClick={e=>{e.stopPropagation();moveLightbox(-1)}}><ChevronLeft/></button><figure onClick={e=>e.stopPropagation()}><img src={galleryAssets[lightbox].src} alt={t.galleryLabels[lightbox]}/><figcaption>{t.galleryLabels[lightbox]} — {galleryAssets[lightbox].concept?t.galleryConcept:galleryAssets[lightbox].retouched?t.galleryRetouched:t.galleryActual}</figcaption></figure><button className="lightbox-arrow next" aria-label="Next photo" onClick={e=>{e.stopPropagation();moveLightbox(1)}}><ChevronRight/></button></div>}
- </>;
+
+export default function Home() {
+  const [lang, setLang] = useState<Lang>('en');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedParcel, setSelectedParcel] = useState<ParcelId>('all');
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [barsAnimated, setBarsAnimated] = useState(false);
+  const [inquiry, setInquiry] = useState({ name: '', email: '', organization: '', message: '' });
+  const [inquiryStatus, setInquiryStatus] = useState<string | null>(null);
+  const barsRef = useRef<HTMLDivElement>(null);
+
+  const t = previewI18n[lang];
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const y = window.scrollY;
+      setScrollProgress(Math.min(1, y / max));
+      setScrolled(y > 80);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // IntersectionObserver for reveal elements
+  useEffect(() => {
+    const elements = document.querySelectorAll(
+      '.preview-section h2, .preview-section .preview-picture, .preview-cards .preview-card, .preview-panels .preview-panel, .preview-mosaic img, .preview-contact-grid > div, .preview-map, .preview-sidebar, .preview-facts > div, .preview-section .eyebrow'
+    );
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('shown');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+    );
+
+    elements.forEach((el) => {
+      el.classList.add('preview-mover');
+      observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // IntersectionObserver for investment bars
+  useEffect(() => {
+    const target = barsRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setBarsAnimated(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.22 }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  // Lightbox keyboard handler
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLightboxImg(null);
+        setMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const handleInquirySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = `Hola Francisco, me interesa recibir más información sobre El Porvenir.%0A%0A*Nombre:* ${encodeURIComponent(inquiry.name)}%0A*Email:* ${encodeURIComponent(inquiry.email)}%0A*Empresa:* ${encodeURIComponent(inquiry.organization)}%0A*Mensaje:* ${encodeURIComponent(inquiry.message)}`;
+    window.open(`https://wa.me/526867013628?text=${text}`, '_blank');
+    setInquiryStatus(lang === 'es' ? 'Abriendo WhatsApp...' : 'Opening WhatsApp...');
+  };
+
+  return (
+    <>
+      {/* Top progress indicator */}
+      <div
+        className="preview-progress"
+        aria-hidden="true"
+        style={{ transform: `scaleX(${scrollProgress})` }}
+      />
+
+      {/* Navigation */}
+      <nav className={`preview-nav ${scrolled ? 'preview-scrolled' : ''}`}>
+        <a href="#home" className="preview-brand">
+          <img src="/assets/emblem.png" alt="El Porvenir" />
+          <span>
+            EL PORVENIR
+            <small>COASTAL LAND INVESTMENT</small>
+          </span>
+        </a>
+        <div className="preview-nav-right">
+          <div id="preview-links" className={`preview-links ${menuOpen ? 'open' : ''}`}>
+            <a href="#opportunity" onClick={() => setMenuOpen(false)}>
+              {t.nav[0]}
+            </a>
+            <a href="#territory" onClick={() => setMenuOpen(false)}>
+              {t.nav[1]}
+            </a>
+            <a href="#vision" onClick={() => setMenuOpen(false)}>
+              {t.nav[2]}
+            </a>
+            <a href="#gallery" onClick={() => setMenuOpen(false)}>
+              {t.nav[3]}
+            </a>
+            <a href="#investment" onClick={() => setMenuOpen(false)}>
+              {t.nav[4]}
+            </a>
+            <a href="#contact" onClick={() => setMenuOpen(false)}>
+              {t.nav[5]}
+            </a>
+          </div>
+          <button
+            className="preview-lang"
+            id="preview-lang-toggle"
+            type="button"
+            aria-label="Switch language"
+            onClick={() => setLang((prev) => (prev === 'en' ? 'es' : 'en'))}
+          >
+            <span className={lang === 'en' ? 'active' : ''}>EN</span>
+            <span>/</span>
+            <span className={lang === 'es' ? 'active' : ''}>ES</span>
+          </button>
+          <button
+            className="preview-menu-toggle"
+            id="preview-menu-toggle"
+            type="button"
+            aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+            aria-controls="preview-links"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {menuOpen ? '✕' : '☰'}
+          </button>
+        </div>
+      </nav>
+
+      {/* 01 Hero */}
+      <section id="home" className="preview-hero">
+        <div className="inner">
+          <span className="eyebrow">{t.heroEyebrow}</span>
+          <h1>
+            {t.heroTitle}
+            <br />
+            <em>{t.heroAccent}</em>
+          </h1>
+          <p>{t.heroDesc}</p>
+          <a className="button-gold" href="#opportunity">
+            {t.heroBtn}
+          </a>
+        </div>
+        <div className="preview-stats">
+          <div>
+            <b>693.83 ha</b>
+            <small>{lang === 'es' ? 'SUPERFICIE APROX.' : 'APPROX. LAND AREA'}</small>
+          </div>
+          <div>
+            <b>US$7.5M</b>
+            <small>{lang === 'es' ? 'PRECIO DE OFERTA' : 'OFFERING PRICE'}</small>
+          </div>
+        </div>
+      </section>
+
+      {/* 02 The Opportunity */}
+      <section id="opportunity" className="preview-section">
+        <div className="preview-container preview-two">
+          <div>
+            <span className="eyebrow">{t.opportunityEyebrow}</span>
+            <h2>
+              {t.opportunityTitle}
+              <br />
+              <em>{t.opportunityAccent}</em>
+            </h2>
+            <p>{t.opportunityDesc}</p>
+            <div className="preview-facts">
+              <div>
+                <b>693.83</b>
+                <small>{lang === 'es' ? 'HECTÁREAS APROX.' : 'APPROX. HECTARES'}</small>
+              </div>
+              <div>
+                <b>US$7.5M</b>
+                <small>{lang === 'es' ? 'PRECIO DE OFERTA' : 'OFFERING PRICE'}</small>
+              </div>
+              <div>
+                <b>02</b>
+                <small>{lang === 'es' ? 'PREDIOS PRIVADOS' : 'LAND PARCELS'}</small>
+              </div>
+            </div>
+          </div>
+          <figure className="preview-picture">
+            <img src="/assets/architecture-concept.webp" alt="Concept architecture" />
+            <figcaption>
+              {lang === 'es'
+                ? 'Visualización arquitectónica conceptual — no condición actual.'
+                : 'Conceptual architectural visualization — not current condition.'}
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      {/* 03 Explore the Territory */}
+      <section id="territory" className="preview-section preview-territory">
+        <div className="preview-container">
+          <div className="preview-center">
+            <span className="eyebrow">{t.territoryEyebrow}</span>
+            <h2>
+              {t.territoryTitle}
+              <br />
+              <em>{t.territoryAccent}</em>
+            </h2>
+            <p>{t.territoryDesc}</p>
+          </div>
+          <div className="preview-territory-grid">
+            <div
+              className={`preview-map ${
+                selectedParcel !== 'all' ? `focus-${selectedParcel}` : ''
+              }`}
+            >
+              <img src="/assets/territory-reference.webp" alt="Concept map" />
+              <span className="preview-tag">
+                {lang === 'es'
+                  ? 'MAPA ILUSTRATIVO · LINDEROS NO CATASTRALES'
+                  : 'ILLUSTRATIVE MAP · NOT SURVEYED BOUNDARIES'}
+              </span>
+            </div>
+            <div className="preview-sidebar">
+              <span className="eyebrow">
+                {lang === 'es' ? 'PERFIL DEL PREDIO' : 'PARCEL PROFILE'}
+              </span>
+              <h3 id="preview-parcel">{parcelData[selectedParcel].title}</h3>
+              <p
+                id="preview-surface"
+                style={{ font: '36px Georgia, serif', color: '#e2c799' }}
+              >
+                {parcelData[selectedParcel].surface}
+              </p>
+              <p id="preview-summary">{parcelData[selectedParcel].summary[lang]}</p>
+              <button
+                type="button"
+                className={selectedParcel === 'baja' ? 'active' : ''}
+                onClick={() => setSelectedParcel('baja')}
+              >
+                Baja Land — 646.21 ha
+              </button>
+              <button
+                type="button"
+                className={selectedParcel === 'california' ? 'active' : ''}
+                onClick={() => setSelectedParcel('california')}
+              >
+                California Rancho — 47.61 ha
+              </button>
+              <button
+                type="button"
+                className={selectedParcel === 'all' ? 'active' : ''}
+                onClick={() => setSelectedParcel('all')}
+              >
+                {lang === 'es' ? 'Oferta conjunta — 693.83 ha' : 'Combined Offering — 693.83 ha'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 04 Development Vision */}
+      <section id="vision" className="preview-section preview-dark">
+        <div className="preview-container">
+          <span className="eyebrow">{t.visionEyebrow}</span>
+          <h2>
+            {t.visionTitle}
+            <br />
+            <em>{t.visionAccent}</em>
+          </h2>
+          <p>{t.visionDesc}</p>
+          <div className="preview-cards">
+            <div className="preview-card">
+              <img src="/assets/vision-resort.webp" alt="Concept resort" />
+              <div>
+                <span className="eyebrow">01 / CONCEPTUAL</span>
+                <h3>{lang === 'es' ? 'Hospitalidad boutique' : 'Boutique hospitality'}</h3>
+                <p>
+                  {lang === 'es'
+                    ? 'Un concepto de hospitalidad boutique en estrecho contacto con el mar y la naturaleza.'
+                    : 'A boutique hospitality concept connected to nature and the sea.'}
+                </p>
+              </div>
+            </div>
+            <div className="preview-card">
+              <img src="/assets/vision-residential.webp" alt="Concept residences" />
+              <div>
+                <span className="eyebrow">02 / CONCEPTUAL</span>
+                <h3>{lang === 'es' ? 'Comunidad residencial' : 'Residential community'}</h3>
+                <p>
+                  {lang === 'es'
+                    ? 'Una visión de baja densidad planificada para un estilo de vida costero.'
+                    : 'A considered, lower-density vision for coastal living.'}
+                </p>
+              </div>
+            </div>
+            <div className="preview-card">
+              <img src="/assets/vision-eco.webp" alt="Concept beach recreation" />
+              <div>
+                <span className="eyebrow">03 / CONCEPTUAL</span>
+                <h3>{lang === 'es' ? 'Naturaleza y recreación' : 'Nature & recreation'}</h3>
+                <p>
+                  {lang === 'es'
+                    ? 'Eco-recreación y bienestar en sintonía con el entorno desértico costero.'
+                    : 'Eco-recreation inspired by the coastal environment.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 05 Gallery & Experience */}
+      <section id="gallery" className="preview-section">
+        <div className="preview-container preview-gallery">
+          <div className="preview-mosaic">
+            {galleryImages.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt="Gallery preview"
+                onClick={() => setLightboxImg(src)}
+              />
+            ))}
+          </div>
+          <div>
+            <span className="eyebrow">{t.galleryEyebrow}</span>
+            <h2>
+              {t.galleryTitle}
+              <br />
+              <em>{t.galleryAccent}</em>
+            </h2>
+            <p>{t.galleryDesc}</p>
+            <p
+              style={{
+                fontSize: '12px',
+                color: '#745d40',
+                borderLeft: '2px solid #CFBD99',
+                padding: '10px 14px',
+                background: '#f6eedf',
+              }}
+            >
+              {lang === 'es'
+                ? 'La fotografía de cactáceas y dunas fue retocada digitalmente con IA para fines de presentación. No acredita la condición actual de la propiedad.'
+                : 'The cactus-and-dunes photograph was digitally retouched with AI for presentation. It does not verify the current condition of the property.'}
+            </p>
+            <p>
+              <strong>WAVES</strong> &nbsp;{' '}
+              {lang === 'es' ? 'Ambiente costero' : 'Coastal setting'}
+            </p>
+            <hr />
+            <p>
+              <strong>DESERT</strong> &nbsp;{' '}
+              {lang === 'es' ? 'Paisaje desértico natural' : 'Natural surroundings'}
+            </p>
+            <hr />
+            <p>
+              <strong>STRUCTURES</strong> &nbsp;{' '}
+              {lang === 'es' ? 'Construcciones existentes' : 'Existing architecture'}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 06 Investment Overview */}
+      <section id="investment" className="preview-section preview-finance">
+        <div className="preview-container">
+          <div className="preview-center">
+            <span className="eyebrow">{t.investmentEyebrow}</span>
+            <h2>
+              {t.investmentTitle}
+              <br />
+              <em>{t.investmentAccent}</em>
+            </h2>
+            <p>{t.investmentDesc}</p>
+          </div>
+          <div className="preview-panels">
+            <div className="preview-panel">
+              <div className="preview-value-card">
+                <span className="eyebrow">
+                  {lang === 'es'
+                    ? 'ANÁLISIS COMPARATIVO DE VALOR'
+                    : 'COMPARATIVE VALUE ANALYSIS'}
+                </span>
+                <h3>
+                  {lang === 'es'
+                    ? 'Precio de venta vs. avalúos de referencia'
+                    : 'Sale price vs. reference appraisals'}
+                </h3>
+                <p className="preview-value-lead">
+                  {lang === 'es'
+                    ? 'Referencias documentales frente al precio de oferta.'
+                    : 'Documentary references compared with the offering price.'}
+                </p>
+                <div className="preview-value-rows" ref={barsRef}>
+                  <div className="preview-value-item">
+                    <div className="preview-value-head">
+                      <span>
+                        {lang === 'es'
+                          ? 'Avalúo aportado · junio 2026'
+                          : 'Supplied appraisal · June 2026'}
+                      </span>
+                      <b>
+                        MXN $2,081,569,914 <small>≈ US$104M*</small>
+                      </b>
+                    </div>
+                    <div className="preview-value-track">
+                      <span
+                        className="preview-value-fill tone-navy"
+                        style={{
+                          width: '100%',
+                          transform: barsAnimated ? 'scaleX(1)' : 'scaleX(0)',
+                          transition: 'transform 1.25s cubic-bezier(.22,1,.36,1)',
+                        }}
+                      />
+                    </div>
+                    <p>
+                      {lang === 'es'
+                        ? 'Documento parcial; metodología por verificar.'
+                        : 'Partial report; methodology still to be verified.'}
+                    </p>
+                  </div>
+                  <div className="preview-value-item">
+                    <div className="preview-value-head">
+                      <span>
+                        {lang === 'es'
+                          ? 'Avalúos históricos · julio 2019'
+                          : 'Historical appraisals · July 2019'}
+                      </span>
+                      <b>US$42,479,000</b>
+                    </div>
+                    <div className="preview-value-track">
+                      <span
+                        className="preview-value-fill tone-slate"
+                        style={{
+                          width: '40.84%',
+                          transform: barsAnimated ? 'scaleX(1)' : 'scaleX(0)',
+                          transition:
+                            'transform 1.25s cubic-bezier(.22,1,.36,1) 0.175s',
+                        }}
+                      />
+                    </div>
+                    <p>
+                      {lang === 'es'
+                        ? 'Referencia histórica; no indica valor de mercado actual.'
+                        : 'Dated reference; not a current market value.'}
+                    </p>
+                  </div>
+                  <div className="preview-value-item tone-offer">
+                    <div className="preview-value-head">
+                      <span>
+                        {lang === 'es'
+                          ? 'Precio de venta directa · El Porvenir'
+                          : 'Direct sale offering · El Porvenir'}
+                      </span>
+                      <b>
+                        US$7,500,000 <small>≈ US$1.08/m²</small>
+                      </b>
+                    </div>
+                    <div className="preview-value-track">
+                      <span
+                        className="preview-value-fill tone-gold"
+                        style={{
+                          width: '7.21%',
+                          transform: barsAnimated ? 'scaleX(1)' : 'scaleX(0)',
+                          transition:
+                            'transform 1.25s cubic-bezier(.22,1,.36,1) 0.35s',
+                        }}
+                      />
+                    </div>
+                    <p>
+                      {lang === 'es'
+                        ? 'Dos predios privados · aprox. 693.83 ha.'
+                        : 'Two private parcels · approx. 693.83 ha.'}
+                    </p>
+                  </div>
+                </div>
+                <p className="preview-value-disclaimer">
+                  {lang === 'es'
+                    ? '* Equivalencia aproximada en USD indicada en el material aportado, no tipo de cambio actual. Las barras comparan fechas y metodologías distintas; no indican descuento garantizado, valor actual ni rentabilidad.'
+                    : '* Approximate USD equivalent as stated in supplied material, not a current FX rate. Bars compare different dates and methodologies; they do not imply a guaranteed discount, current valuation, or investment return.'}
+                </p>
+                <div className="preview-value-footer">
+                  <span>
+                    693.83 ha{' '}
+                    <small>{lang === 'es' ? 'APROX.' : 'APPROX.'}</small>
+                  </span>
+                  <span>
+                    02 <small>{lang === 'es' ? 'PREDIOS' : 'PARCELS'}</small>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="preview-panel dark">
+              <span className="eyebrow">
+                {lang === 'es'
+                  ? 'FINANCIAMIENTO DIRECTO DEL PROPIETARIO'
+                  : 'DIRECT OWNER FINANCING'}
+              </span>
+              <h3>
+                {lang === 'es'
+                  ? 'Propuesta de tres pagos'
+                  : 'Three-payment proposal'}
+              </h3>
+              <p style={{ color: '#d1ded9' }}>
+                {lang === 'es'
+                  ? 'Montos específicos, plazos, transmisión de dominio y garantías deben acordarse por escrito.'
+                  : 'Specific amounts, timing, title transfer and safeguards must be agreed in writing.'}
+              </p>
+              <div className="preview-installment">
+                <b>
+                  {lang === 'es'
+                    ? '01 · APERTURA Y CONTRATO'
+                    : '01 · AGREEMENT STAGE'}
+                </b>
+                <div>{lang === 'es' ? 'Monto y términos por acordar' : 'Amount to be agreed'}</div>
+              </div>
+              <div className="preview-installment">
+                <b>
+                  {lang === 'es'
+                    ? '02 · PAGO INTERMEDIO'
+                    : '02 · INTERMEDIATE STAGE'}
+                </b>
+                <div>{lang === 'es' ? 'Monto y calendario por acordar' : 'Amount to be agreed'}</div>
+              </div>
+              <div className="preview-installment">
+                <b>
+                  {lang === 'es'
+                    ? '03 · CIERRE Y ESCRITURACIÓN'
+                    : '03 · CLOSING'}
+                </b>
+                <div>{lang === 'es' ? 'Monto y condiciones de cierre' : 'Amount to be agreed'}</div>
+              </div>
+              <a href="#contact" className="button-gold">
+                {lang === 'es' ? 'Solicitar condiciones de pago →' : 'Request payment terms →'}
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 07 Contact */}
+      <section id="contact" className="preview-section preview-contact">
+        <div className="preview-container">
+          <div className="preview-contact-grid">
+            <div>
+              <span className="eyebrow">{t.contactEyebrow}</span>
+              <h2>
+                {t.contactTitle}
+                <br />
+                <em>{t.contactAccent}</em>
+              </h2>
+              <p style={{ color: '#e7ece8' }}>{t.contactDesc}</p>
+              <p>
+                <strong>Francisco Reynoso</strong>
+                <br />
+                Reynoso & Asociados
+                <br />
+                +52 686 701 3628
+              </p>
+              <a
+                className="button-gold"
+                href="https://wa.me/526867013628"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {lang === 'es'
+                  ? 'Contactar a Francisco en WhatsApp →'
+                  : 'Contact Francisco on WhatsApp →'}
+              </a>
+            </div>
+            <div className="preview-panel">
+              <h3 style={{ color: '#fff' }}>
+                {lang === 'es' ? 'Presentación privada' : 'Private presentation'}
+              </h3>
+              <p style={{ color: '#d1dddc' }}>
+                {lang === 'es'
+                  ? 'Envía tu consulta directa para recibir el dossier confidencial de inversión.'
+                  : 'Submit your inquiry to receive confidential investment documentation.'}
+              </p>
+              <form onSubmit={handleInquirySubmit}>
+                <input
+                  name="name"
+                  placeholder={lang === 'es' ? 'Nombre completo' : 'Full Name'}
+                  required
+                  value={inquiry.name}
+                  onChange={(e) => setInquiry({ ...inquiry, name: e.target.value })}
+                />
+                <input
+                  name="email"
+                  type="email"
+                  placeholder={lang === 'es' ? 'Correo electrónico' : 'Email address'}
+                  required
+                  value={inquiry.email}
+                  onChange={(e) => setInquiry({ ...inquiry, email: e.target.value })}
+                />
+                <input
+                  name="organization"
+                  placeholder={
+                    lang === 'es' ? 'Empresa u Organización' : 'Company / Organization'
+                  }
+                  value={inquiry.organization}
+                  onChange={(e) =>
+                    setInquiry({ ...inquiry, organization: e.target.value })
+                  }
+                />
+                <textarea
+                  rows={3}
+                  placeholder={
+                    lang === 'es'
+                      ? 'Interés de inversión o mensaje'
+                      : 'Investment interests / message'
+                  }
+                  value={inquiry.message}
+                  onChange={(e) => setInquiry({ ...inquiry, message: e.target.value })}
+                />
+                <button
+                  type="submit"
+                  className="button-gold"
+                  style={{ width: '100%', justifyContent: 'center', border: 0 }}
+                >
+                  {inquiryStatus ||
+                    (lang === 'es'
+                      ? 'Continuar por WhatsApp →'
+                      : 'Continue on WhatsApp →')}
+                </button>
+              </form>
+            </div>
+          </div>
+          <div className="preview-footer">
+            <span>© {new Date().getFullYear()} EL PORVENIR</span>
+            <span>Presented by Reynoso & Asociados</span>
+            <span>
+              {lang === 'es'
+                ? 'Material conceptual · requiere verificación independiente'
+                : 'Conceptual material · independent verification required'}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* Lightbox modal */}
+      {lightboxImg && (
+        <div
+          id="lightbox"
+          className="preview-gallery-modal show"
+          onClick={() => setLightboxImg(null)}
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setLightboxImg(null)}
+          >
+            ×
+          </button>
+          <img
+            src={lightboxImg}
+            alt="Gallery expanded"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
+  );
 }
