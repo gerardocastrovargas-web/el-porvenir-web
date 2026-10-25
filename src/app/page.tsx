@@ -27,7 +27,7 @@ const previewI18n = {
     galleryEyebrow: '05 — GALLERY & EXPERIENCE',
     galleryTitle: 'See the place.',
     galleryAccent: 'Feel the setting.',
-    galleryDesc: 'Explore the coastline, desert landscapes and original structures through selected visual records. Historic photos, AI-retouched imagery and future concepts are identified separately.',
+    galleryDesc: 'Explore the coastline, desert landscapes and original structures through selected photographic records of the property.',
     investmentEyebrow: '06 — INVESTMENT OVERVIEW',
     investmentTitle: 'Investment information',
     investmentAccent: 'for informed decisions.',
@@ -59,7 +59,7 @@ const previewI18n = {
     galleryEyebrow: '05 — GALERÍA Y EXPERIENCIA',
     galleryTitle: 'Conoce el lugar.',
     galleryAccent: 'Siente el entorno.',
-    galleryDesc: 'Explora la costa, el paisaje desértico y las estructuras existentes mediante registros visuales seleccionados. Las fotos históricas, las imágenes retocadas con IA y los conceptos futuros están identificados por separado.',
+    galleryDesc: 'Explora la costa, el paisaje desértico y las estructuras originales mediante registros fotográficos seleccionados de la propiedad.',
     investmentEyebrow: '06 — RESUMEN DE INVERSIÓN',
     investmentTitle: 'Información de inversión',
     investmentAccent: 'para decidir mejor.',
@@ -98,21 +98,119 @@ const parcelData = {
   },
 };
 
-const galleryImages = [
-  '/assets/original-seaview.webp',
-  '/assets/original-palapa.webp',
-  '/assets/original-architecture.webp',
-  '/assets/original-arch.webp',
-  '/assets/historical-concrete.webp',
-  '/assets/real-retouched-cactus-dunes.webp',
-  '/assets/architecture-concept.webp',
+const galleryItems = [
+  {
+    src: '/assets/gallery-portal.webp',
+    alt: {
+      es: 'Acceso y pórtico costero entre dunas hacia el mar',
+      en: 'Coastal portal and dune pathway to the ocean',
+    },
+    tag: {
+      es: 'WAVES · Acceso al mar',
+      en: 'WAVES · Ocean access',
+    },
+    title: {
+      es: 'Pórtico costero y dunas',
+      en: 'Coastal portal & dunes',
+    },
+  },
+  {
+    src: '/assets/gallery-cactus-pergola.webp',
+    alt: {
+      es: 'Cactáceas y arquitectura de adobe con pérgola rústica',
+      en: 'Desert cactus and adobe architecture with rustic pergola',
+    },
+    tag: {
+      es: 'DESERT · Cactáceas y arquitectura',
+      en: 'DESERT · Cactus & architecture',
+    },
+    title: {
+      es: 'Cactáceas y pérgola tradicional',
+      en: 'Desert cactus & rustic pergola',
+    },
+  },
+  {
+    src: '/assets/gallery-historic-huts.webp',
+    alt: {
+      es: 'Palapas y construcciones circulares sobre las dunas',
+      en: 'Historic palapas and circular huts on the dunes',
+    },
+    tag: {
+      es: 'STRUCTURES · Construcciones existentes',
+      en: 'STRUCTURES · Existing structures',
+    },
+    title: {
+      es: 'Palapas y construcciones del desierto',
+      en: 'Desert palapas & historic huts',
+    },
+  },
+  {
+    src: '/assets/gallery-stone-overlook.webp',
+    alt: {
+      es: 'Mirador circular de piedra frente al Golfo de California',
+      en: 'Circular stone overlook facing the Gulf of California',
+    },
+    tag: {
+      es: 'WAVES · Mirador al mar',
+      en: 'WAVES · Coastal overlook',
+    },
+    title: {
+      es: 'Mirador de piedra al Golfo',
+      en: 'Stone overlook to the Gulf',
+    },
+  },
+  {
+    src: '/assets/gallery-palapa-interior.webp',
+    alt: {
+      es: 'Vista desde el interior bajo techo de palapa tradicional hacia la terraza y el desierto',
+      en: 'Interior perspective under traditional thatched palapa overlooking terrace and desert',
+    },
+    tag: {
+      es: 'STRUCTURES · Interior y palapa',
+      en: 'STRUCTURES · Interior & palapa view',
+    },
+    title: {
+      es: 'Vista interior desde palapa tradicional',
+      en: 'Interior view from traditional palapa',
+    },
+  },
+  {
+    src: '/assets/gallery-estate-construction.webp',
+    alt: {
+      es: 'Gran residencia costera de dos plantas con terrazas de madera frente al mar de Cortés',
+      en: 'Large two-story coastal stone estate with wood deck balconies facing the Gulf of California',
+    },
+    tag: {
+      es: 'STRUCTURES · Residencia costera',
+      en: 'STRUCTURES · Coastal estate',
+    },
+    title: {
+      es: 'Residencia costera en construcción',
+      en: 'Coastal estate in construction',
+    },
+  },
+  {
+    src: '/assets/gallery-foundations-sea.webp',
+    alt: {
+      es: 'Cimientos y muros de piedra sobre las dunas costeras con vista al mar y cordillera',
+      en: 'Stone block foundations on coastal dunes overlooking calm turquoise sea and mountains',
+    },
+    tag: {
+      es: 'WAVES · Cimientos frente al mar',
+      en: 'WAVES · Coastal foundations',
+    },
+    title: {
+      es: 'Cimientos y muros frente al mar',
+      en: 'Stone foundations facing the sea',
+    },
+  },
 ];
 
 export default function Home() {
   const [lang, setLang] = useState<Lang>('en');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedParcel, setSelectedParcel] = useState<ParcelId>('all');
-  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [barsAnimated, setBarsAnimated] = useState(false);
@@ -187,13 +285,21 @@ export default function Home() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setLightboxImg(null);
+        setLightboxIndex(null);
         setMenuOpen(false);
+      }
+      if (lightboxIndex !== null) {
+        if (e.key === 'ArrowRight') {
+          setLightboxIndex((prev) => (prev !== null ? (prev + 1) % galleryItems.length : null));
+        }
+        if (e.key === 'ArrowLeft') {
+          setLightboxIndex((prev) => (prev !== null ? (prev - 1 + galleryItems.length) % galleryItems.length : null));
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [lightboxIndex]);
 
   const handleInquirySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -447,13 +553,35 @@ export default function Home() {
       <section id="gallery" className="preview-section">
         <div className="preview-container preview-gallery">
           <div className="preview-mosaic">
-            {galleryImages.map((src, i) => (
-              <img
+            {galleryItems.map((item, i) => (
+              <div
                 key={i}
-                src={src}
-                alt="Gallery preview"
-                onClick={() => setLightboxImg(src)}
-              />
+                className="gallery-item"
+                onClick={() => setLightboxIndex(i)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setLightboxIndex(i);
+                  }
+                }}
+              >
+                <img
+                  src={item.src}
+                  alt={item.alt[lang]}
+                  loading="lazy"
+                />
+                <div className="gallery-badge">
+                  <span>{item.tag[lang]}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <line x1="11" y1="8" x2="11" y2="14" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
+                </div>
+              </div>
             ))}
           </div>
           <div>
@@ -474,8 +602,8 @@ export default function Home() {
               }}
             >
               {lang === 'es'
-                ? 'La fotografía de cactáceas y dunas fue retocada digitalmente con IA para fines de presentación. No acredita la condición actual de la propiedad.'
-                : 'The cactus-and-dunes photograph was digitally retouched with AI for presentation. It does not verify the current condition of the property.'}
+                ? 'Fotografías reales del predio con optimización lumínica y balance de color para presentación visual. No sustituyen la inspección física in situ.'
+                : 'Authentic photographs of the property with lighting optimization and color grading for visual presentation. Does not substitute an on-site physical inspection.'}
             </p>
             <p>
               <strong>WAVES</strong> &nbsp;{' '}
@@ -773,24 +901,59 @@ export default function Home() {
       </section>
 
       {/* Lightbox modal */}
-      {lightboxImg && (
+      {lightboxIndex !== null && (
         <div
           id="lightbox"
           className="preview-gallery-modal show"
-          onClick={() => setLightboxImg(null)}
+          onClick={() => setLightboxIndex(null)}
         >
           <button
             type="button"
+            className="lightbox-close-btn"
             aria-label="Close"
-            onClick={() => setLightboxImg(null)}
+            onClick={() => setLightboxIndex(null)}
           >
             ×
           </button>
-          <img
-            src={lightboxImg}
-            alt="Gallery expanded"
-            onClick={(e) => e.stopPropagation()}
-          />
+
+          <button
+            type="button"
+            className="lightbox-arrow-btn lightbox-arrow-prev"
+            aria-label="Previous"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxIndex((lightboxIndex - 1 + galleryItems.length) % galleryItems.length);
+            }}
+          >
+            ‹
+          </button>
+
+          <button
+            type="button"
+            className="lightbox-arrow-btn lightbox-arrow-next"
+            aria-label="Next"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxIndex((lightboxIndex + 1) % galleryItems.length);
+            }}
+          >
+            ›
+          </button>
+
+          <div className="lightbox-dialog" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={galleryItems[lightboxIndex].src}
+              alt={galleryItems[lightboxIndex].alt[lang]}
+            />
+            <div className="lightbox-caption-bar">
+              <span className="lightbox-badge-tag">
+                {galleryItems[lightboxIndex].tag[lang]} · {lightboxIndex + 1} / {galleryItems.length}
+              </span>
+              <strong className="lightbox-badge-title">
+                {galleryItems[lightboxIndex].title[lang]}
+              </strong>
+            </div>
+          </div>
         </div>
       )}
     </>
